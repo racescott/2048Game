@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>2048 - 小米SU7 海湾蓝版</title>
+    <style>
+        /* CSS Variables for Xiaomi SU7 Gulf Blue Color Palette */
+        :root {
+            --su7-gulf-blue: #33a6b8;
+            --su7-light-gray: #f5f5f5;
+            --su7-dark-gray: #776e65;
+            --su7-grid-background: #bbada0;
+            --su7-grid-cell: #ccc0b3;
+            --su7-text-light: #f9f6f2;
+            --su7-text-dark: #776e65;
+            --su7-background: #faf8ef;
+            --game-container-width: 90vw;
+            --game-container-max-width: 500px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--su7-background);
+            color: var(--su7-dark-gray);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            min-height: 100vh;
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        h1 {
+            font-size: 56px;
+            font-weight: bold;
+            color: var(--su7-gulf-blue);
+            margin: 0;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: var(--game-container-width);
+            max-width: var(--game-container-max-width);
+            margin-bottom: 20px;
+        }
+
+        .header-left {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header p {
+            margin: 0;
+            font-size: 16px;
+        }
+
+        .scores-container {
+            display: flex;
+            gap: 8px;
+        }
+
+        .score-box {
+            background-color: var(--su7-grid-background);
+            color: var(--su7-text-light);
+            padding: 8px 15px;
+            border-radius: 5px;
+            text-align: center;
+            font-size: 14px;
+        }
+        
+        .score-box .score-title {
+            color: #eee4da;
+        }
+
+        #score, #best-score {
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .game-container {
+            background-color: var(--su7-grid-background);
+            padding: 15px;
+            border-radius: 6px;
+            position: relative;
+            width: var(--game-container-width);
+            height: var(--game-container-width);
+            max-width: var(--game-container-max-width);
+            max-height: var(--game-container-max-width);
+            box-sizing: border-box;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+            gap: 15px;
+            width: 100%;
+            height: 100%;
+        }
+
+        .grid-cell {
+            background-color: var(--su7-grid-cell);
+            border-radius: 3px;
+        }
+        
+        .tile-container {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            right: 15px;
+            bottom: 15px;
+        }
+
+        .tile {
+            position: absolute;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            border-radius: 3px;
+            transition: all 0.1s ease-in-out;
+            font-size: 45px;
+            box-sizing: border-box;
+        }
+        
+        /* Tile Colors - inspired by a mix of classic and SU7 blue */
+        .tile[data-value="2"] { background-color: #eee4da; color: var(--su7-text-dark); }
+        .tile[data-value="4"] { background-color: #ede0c8; color: var(--su7-text-dark); }
+        .tile[data-value="8"] { background-color: #f2b179; color: var(--su7-text-light); }
+        .tile[data-value="16"] { background-color: #f59563; color: var(--su7-text-light); }
+        .tile[data-value="32"] { background-color: #f67c5f; color: var(--su7-text-light); }
+        .tile[data-value="64"] { background-color: #f65e3b; color: var(--su7-text-light); }
+        .tile[data-value="128"] { background-color: #edcf72; color: var(--su7-text-light); font-size: 35px; }
+        .tile[data-value="256"] { background-color: #edcc61; color: var(--su7-text-light); font-size: 35px; }
+        .tile[data-value="512"] { background-color: #edc850; color: var(--su7-text-light); font-size: 35px; }
+        .tile[data-value="1024"] { background-color: var(--su7-gulf-blue); color: var(--su7-text-light); font-size: 28px; }
+        .tile[data-value="2048"] { background-color: #3c3a32; color: var(--su7-text-light); font-size: 28px; }
+        .tile[data-value="4096"] { background-color: #3c3a32; color: var(--su7-text-light); font-size: 28px; }
+        
+        @media (max-width: 520px) {
+            h1 { font-size: 40px; }
+            .header p { font-size: 14px; }
+            .game-container { padding: 10px; }
+            .grid-container { gap: 10px; }
+            .tile-container { top: 10px; left: 10px; right: 10px; bottom: 10px; }
+            .tile { font-size: 24px; }
+            .tile[data-value="128"], .tile[data-value="256"], .tile[data-value="512"] { font-size: 22px; }
+            .tile[data-value="1024"], .tile[data-value="2048"], .tile[data-value="4096"] { font-size: 18px; }
+        }
+
+        .game-over-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(250, 248, 239, 0.73);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            font-size: 40px;
+            font-weight: bold;
+            color: var(--su7-dark-gray);
+            border-radius: 6px;
+            z-index: 100;
+            animation: fade-in 0.5s ease;
+        }
+
+        .restart-button {
+            background-color: var(--su7-gulf-blue);
+            color: var(--su7-text-light);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 20px;
+            margin-top: 20px;
+            cursor: pointer;
+        }
+        
+        @keyframes fade-in {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="header-left">
+            <h1>2048</h1>
+            <p>小米SU7 海湾蓝主题</p>
+        </div>
+        <div class="scores-container">
+            <div class="score-box">
+                <div class="score-title">SCORE</div>
+                <div id="score">0</div>
+            </div>
+            <div class="score-box">
+                <div class="score-title">BEST</div>
+                <div id="best-score">0</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="game-container">
+        <div class="tile-container" id="tile-container"></div>
+        <div class="grid-container">
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
+            <div class="grid-cell"></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const gridDisplay = document.querySelector('.grid-container');
+            const tileContainer = document.getElementById('tile-container');
+            const scoreDisplay = document.getElementById('score');
+            const bestScoreDisplay = document.getElementById('best-score');
+            const gameContainer = document.querySelector('.game-container');
+            const size = 4;
+            let grid = [];
+            let score = 0;
+            let bestScore = localStorage.getItem('bestScore2048') || 0;
+            bestScoreDisplay.innerHTML = bestScore;
+
+            // Initialize Game
+            function init() {
+                grid = Array.from({ length: size }, () => Array(size).fill(0));
+                score = 0;
+                scoreDisplay.innerHTML = 0;
+                addRandomTile();
+                addRandomTile();
+                renderBoard();
+            }
+
+            // Render the board based on the grid state
+            function renderBoard() {
+                tileContainer.innerHTML = '';
+                const gap = (gameContainer.clientWidth <= 520) ? 10 : 15;
+                const containerPadding = (gameContainer.clientWidth <= 520) ? 10 : 15;
+                const totalGap = gap * (size - 1);
+                const totalPadding = containerPadding * 2;
+                const tileSize = (gameContainer.clientWidth - totalGap - totalPadding) / size;
+                
+                for (let r = 0; r < size; r++) {
+                    for (let c = 0; c < size; c++) {
+                        if (grid[r][c] !== 0) {
+                            const tile = document.createElement('div');
+                            tile.classList.add('tile');
+                            tile.setAttribute('data-value', grid[r][c]);
+                            tile.innerText = grid[r][c];
+                            tile.style.top = `${r * (tileSize + gap)}px`;
+                            tile.style.left = `${c * (tileSize + gap)}px`;
+                            tile.style.width = `${tileSize}px`;
+                            tile.style.height = `${tileSize}px`;
+                            tileContainer.appendChild(tile);
+                        }
+                    }
+                }
+            }
+
+            // Add a new tile (2 or 4) to a random empty cell
+            function addRandomTile() {
+                const emptyCells = [];
+                for (let r = 0; r < size; r++) {
+                    for (let c = 0; c < size; c++) {
+                        if (grid[r][c] === 0) {
+                            emptyCells.push({ r, c });
+                        }
+                    }
+                }
+
+                if (emptyCells.length > 0) {
+                    const { r, c } = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+                    grid[r][c] = Math.random() < 0.9 ? 2 : 4;
+                }
+            }
+            
+            // Handle Keyboard Input
+            document.addEventListener('keydown', handleKey);
+
+            function handleKey(e) {
+                let moved = false;
+                switch (e.key) {
+                    case 'ArrowUp': moved = moveUp(); break;
+                    case 'ArrowDown': moved = moveDown(); break;
+                    case 'ArrowLeft': moved = moveLeft(); break;
+                    case 'ArrowRight': moved = moveRight(); break;
+                    default: return;
+                }
+                if (moved) {
+                    addRandomTile();
+                    renderBoard();
+                    checkGameOver();
+                }
+            }
+            
+            // Handle Touch Input
+            let touchStartX = 0;
+            let touchStartY = 0;
+            let touchEndX = 0;
+            let touchEndY = 0;
+
+            gameContainer.addEventListener('touchstart', (e) => {
+                touchStartX = e.changedTouches[0].screenX;
+                touchStartY = e.changedTouches[0].screenY;
+            });
+
+            gameContainer.addEventListener('touchend', (e) => {
+                touchEndX = e.changedTouches[0].screenX;
+                touchEndY = e.changedTouches[0].screenY;
+                handleSwipe();
+            });
+
+            function handleSwipe() {
+                const dx = touchEndX - touchStartX;
+                const dy = touchEndY - touchStartY;
+                const absDx = Math.abs(dx);
+                const absDy = Math.abs(dy);
+
+                let moved = false;
+                if (Math.max(absDx, absDy) > 20) { // Threshold
+                    if (absDx > absDy) {
+                        moved = dx > 0 ? moveRight() : moveLeft();
+                    } else {
+                        moved = dy > 0 ? moveDown() : moveUp();
+                    }
+                }
+                if (moved) {
+                    setTimeout(() => { // Small delay for visual feedback
+                       addRandomTile();
+                       renderBoard();
+                       checkGameOver();
+                    }, 100);
+                }
+            }
+
+            // Movement Logic
+            function moveLeft() {
+                let moved = false;
+                for (let r = 0; r < size; r++) {
+                    let row = grid[r];
+                    let originalRow = [...row];
+                    let newRow = slide(row);
+                    grid[r] = merge(newRow);
+                    if (JSON.stringify(originalRow) !== JSON.stringify(grid[r])) {
+                        moved = true;
+                    }
+                }
+                return moved;
+            }
+
+            function moveRight() {
+                let moved = false;
+                for (let r = 0; r < size; r++) {
+                    let row = grid[r].reverse();
+                    let originalRow = [...row].reverse();
+                    let newRow = slide(row);
+                    let mergedRow = merge(newRow);
+                    grid[r] = mergedRow.reverse();
+                    if (JSON.stringify(originalRow) !== JSON.stringify(grid[r])) {
+                        moved = true;
+                    }
+                }
+                return moved;
+            }
+
+            function moveUp() {
+                let moved = false;
+                for (let c = 0; c < size; c++) {
+                    let col = [grid[0][c], grid[1][c], grid[2][c], grid[3][c]];
+                    let originalCol = [...col];
+                    let newCol = slide(col);
+                    let mergedCol = merge(newCol);
+                    for (let r = 0; r < size; r++) {
+                        if (grid[r][c] !== mergedCol[r]) {
+                            moved = true;
+                        }
+                        grid[r][c] = mergedCol[r];
+                    }
+                }
+                return moved;
+            }
+            
+            function moveDown() {
+                let moved = false;
+                for (let c = 0; c < size; c++) {
+                    let col = [grid[3][c], grid[2][c], grid[1][c], grid[0][c]];
+                    let originalCol = [...col].reverse();
+                    let newCol = slide(col);
+                    let mergedCol = merge(newCol).reverse();
+                    for (let r = 0; r < size; r++) {
+                        if (grid[r][c] !== mergedCol[r]) {
+                            moved = true;
+                        }
+                        grid[r][c] = mergedCol[r];
+                    }
+                }
+                return moved;
+            }
+
+            // Core slide and merge logic
+            function slide(row) {
+                let arr = row.filter(val => val);
+                let missing = size - arr.length;
+                let zeros = Array(missing).fill(0);
+                return arr.concat(zeros);
+            }
+
+            function merge(row) {
+                for (let i = 0; i < size - 1; i++) {
+                    if (row[i] !== 0 && row[i] === row[i + 1]) {
+                        row[i] *= 2;
+                        row[i + 1] = 0;
+                        score += row[i];
+                        updateScore(score);
+                    }
+                }
+                return slide(row);
+            }
+
+            // Update Score
+            function updateScore(newScore) {
+                scoreDisplay.innerHTML = newScore;
+                if (newScore > bestScore) {
+                    bestScore = newScore;
+                    bestScoreDisplay.innerHTML = bestScore;
+                    localStorage.setItem('bestScore2048', bestScore);
+                }
+            }
+
+            // Check for Game Over
+            function canMove() {
+                for (let r = 0; r < size; r++) {
+                    for (let c = 0; c < size; c++) {
+                        if (grid[r][c] === 0) return true; // Empty cell
+                        if (r < size - 1 && grid[r][c] === grid[r + 1][c]) return true; // Vertical merge
+                        if (c < size - 1 && grid[r][c] === grid[r][c + 1]) return true; // Horizontal merge
+                    }
+                }
+                return false;
+            }
+
+            function checkGameOver() {
+                if (!canMove()) {
+                    const overlay = document.createElement('div');
+                    overlay.classList.add('game-over-overlay');
+                    
+                    const message = document.createElement('p');
+                    message.innerText = 'Game Over!';
+                    
+                    const restartButton = document.createElement('button');
+                    restartButton.classList.add('restart-button');
+                    restartButton.innerText = 'Try Again';
+                    restartButton.onclick = () => {
+                        gameContainer.removeChild(overlay);
+                        init();
+                    };
+                    
+                    overlay.appendChild(message);
+                    overlay.appendChild(restartButton);
+                    gameContainer.appendChild(overlay);
+                }
+            }
+
+            // Resize event listener to make it responsive
+            window.addEventListener('resize', renderBoard);
+            
+            // Start the game
+            init();
+        });
+    </script>
+</body>
+</html>
